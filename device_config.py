@@ -10,9 +10,9 @@ Network configuration for device proxy through WireGuard
 DEVICE_TYPES = {
     'water_system': {
         'name': 'Top Off Water',
-        'description': 'Auto Top Off Aquarium Water System',
+        'description': 'Water Top-Off System',
         'icon': '',
-        'color': '#3498db'
+        'color': '#38bdf8'
     },
     'doser_system': {
         'name': 'Doser',

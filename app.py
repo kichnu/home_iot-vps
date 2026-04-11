@@ -7,7 +7,7 @@ Simplified version without database logging functionality
 import os
 import sys
 import time
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash, make_response
 import logging
 from datetime import datetime
 import secrets
@@ -111,6 +111,9 @@ def add_security_headers(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Content-Security-Policy'] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+    # Prevent caching of login/auth pages to avoid stale CSRF tokens in bfcache
+    if request.path in ('/login', '/logout'):
+        response.headers['Cache-Control'] = 'no-store'
     return response
 
 
@@ -125,7 +128,18 @@ def login_page():
     if validate_session():
         return redirect(url_for('device_dashboard'))
     passkeys_available = has_registered_credentials()
-    return render_template('login.html', passkeys_available=passkeys_available)
+    response = make_response(render_template('login.html', passkeys_available=passkeys_available))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+def _login_response(status_code, passkeys_available=None):
+    """Render login page with cache-busting headers to prevent bfcache CSRF issues."""
+    if passkeys_available is None:
+        passkeys_available = has_registered_credentials()
+    response = make_response(render_template('login.html', passkeys_available=passkeys_available), status_code)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 @app.route('/login', methods=['POST'])
@@ -151,14 +165,14 @@ def login_submit():
                 f"Blocked login attempt from locked IP: {client_ip} "
                 f"(unlocks in {time_left_minutes} minutes)"
             )
-            return render_template('login.html'), 429
+            return _login_response(429)
 
         # Validate password
         password = request.form.get('password', '')
 
         if not password:
             flash('Password is required.', 'error')
-            return render_template('login.html'), 400
+            return _login_response(400)
 
         if secure_compare(password, Config.ADMIN_PASSWORD):
             # Successful login
@@ -180,7 +194,7 @@ def login_submit():
                 f"Failed admin login from IP: {client_ip} "
                 f"(attempt {result['attempt_count']}/{Config.MAX_FAILED_ATTEMPTS}) - ACCOUNT LOCKED"
             )
-            return render_template('login.html'), 429
+            return _login_response(429)
         else:
             remaining = result.get('remaining_attempts', 0)
             flash(f'Invalid password. {remaining} attempts remaining.', 'error')
@@ -188,7 +202,7 @@ def login_submit():
                 f"Failed admin login from IP: {client_ip} "
                 f"(attempt {result['attempt_count']}/{Config.MAX_FAILED_ATTEMPTS}, {remaining} remaining)"
             )
-            return render_template('login.html'), 401
+            return _login_response(401)
 
     except Exception as e:
         logging.error(f"Login error for IP {client_ip}: {e}", exc_info=True)
@@ -196,7 +210,7 @@ def login_submit():
             'An error occurred during login. Please try again or contact administrator.',
             'error'
         )
-        return render_template('login.html'), 500
+        return _login_response(500)
 
 
 @app.route('/logout', methods=['GET', 'POST'])

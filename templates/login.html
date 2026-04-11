@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IoT Gateway - Login</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <style>
         :root {
             --bg-primary: #0f0a1a;
@@ -60,7 +61,7 @@
         .login-container {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            padding: 40px;
+            padding: 60px;
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             width: 100%;
@@ -189,14 +190,6 @@
             color: var(--accent-amber);
         }
 
-        .version-info {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
         .passkey-divider {
             display: flex;
             align-items: center;
@@ -308,14 +301,16 @@
 
         <div class="passkey-error" id="passkeyError" style="display:none;"></div>
         {% endif %}
-
-        <div class="version-info">
-            IoT Gateway<br>
-            Session-based Authentication
-        </div>
     </div>
 
     <script>
+        // Reload when restored from bfcache to ensure fresh CSRF token
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             const loginBtn = document.getElementById('loginBtn');
             loginBtn.disabled = true;
