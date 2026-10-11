@@ -25,6 +25,12 @@ DEVICE_TYPES = {
         'description': 'Switch Timer',
         'icon': '',
         'color': '#e67e22'
+    },
+    'thermo_control': {
+        'name': 'Thermo Control',
+        'description': 'Aquarium Temperature Controller',
+        'icon': '',
+        'color': '#f87171'
     }
 }
 
@@ -60,6 +66,14 @@ DEVICE_NETWORK_CONFIG = {
         'lan_ip': '192.168.10.10',
         'lan_port': 80,
         'proxy_path': '/device/switch',
+        'health_endpoint': '/api/health',
+        'has_local_dashboard': True,
+        'timeout_seconds': 5
+    },
+    'thermo_control': {
+        'lan_ip': '192.168.10.4',
+        'lan_port': 80,
+        'proxy_path': '/device/thermo',
         'health_endpoint': '/api/health',
         'has_local_dashboard': True,
         'timeout_seconds': 5

@@ -53,6 +53,7 @@ def check_device_health(device_type: str) -> dict:
     lan_port = config.get('lan_port', 80)
     timeout = config.get('timeout_seconds', 5)
     health_endpoint = config.get('health_endpoint', '/api/health')
+    health_check_mode = config.get('health_check_mode', 'strict')
 
     url = f"http://{lan_ip}:{lan_port}{health_endpoint}"
 
@@ -68,7 +69,15 @@ def check_device_health(device_type: str) -> dict:
             latency_ms = int((time.time() - start_time) * 1000)
             if resp.status == 200:
                 body = json.loads(resp.read().decode('utf-8'))
-                if body.get('status') == 'ok':
+                if health_check_mode == 'reachable':
+                    # No {"status":"ok"} contract available - any valid JSON
+                    # response on this endpoint means the device is up.
+                    online = True
+                    device_name = body.get('device_name')
+                    logging.debug(
+                        f"Device {device_type} health check: online ({latency_ms}ms, reachable mode)"
+                    )
+                elif body.get('status') == 'ok':
                     online = True
                     device_name = body.get('device_name')
                     logging.debug(
