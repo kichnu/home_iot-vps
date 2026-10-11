@@ -78,6 +78,7 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable home-iot
 sudo systemctl start home-iot
+sudo systemctl restart home-iot
 ```
 
 ## Nginx Configuration
@@ -123,6 +124,8 @@ location / {
     proxy_set_header X-Real-IP $remote_addr;
 }
 ```
+sudo nginx -t && sudo systemctl reload nginx
+
 
 ## Adding Devices
 

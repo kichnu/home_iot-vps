@@ -94,6 +94,7 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 Config.log_startup_info(logging)
 init_database_path(Config.DATABASE_PATH)
