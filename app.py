@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 import secrets
 from flask_limiter import Limiter
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from config import Config
 from utils.security import secure_compare, get_real_ip
 from database import get_db_connection, init_database_path, init_database
@@ -54,10 +54,13 @@ app.secret_key = Config.SECRET_KEY or secrets.token_hex(32)
 app.permanent_session_lifetime = Config.SESSION_PERMANENT_LIFETIME
 
 # Initialize CSRF protection
+# The automatic before_request check is disabled: it would reject requests before
+# the view's rate limit and lockout logic run, leaving CSRF-less POST floods
+# unthrottled. Form views call csrf.protect() explicitly instead (see login_submit).
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 csrf = CSRFProtect(app)
 
-# Exempt API routes from CSRF (they use session auth, not form submission)
-# Note: logout uses @csrf.exempt decorator directly
+# API routes keep @csrf.exempt as documentation; they use session auth, not forms
 
 app.config.update(
     TEMPLATES_AUTO_RELOAD=Config.TEMPLATES_AUTO_RELOAD,
@@ -168,6 +171,18 @@ def login_submit():
             )
             return _login_response(429)
 
+        # CSRF check after rate limit and lockout, so failures count as attempts
+        try:
+            csrf.protect()
+        except CSRFError as e:
+            result = record_failed_attempt(client_ip)
+            logging.warning(
+                f"CSRF validation failed on login from IP: {client_ip} ({e.description}) "
+                f"(attempt {result['attempt_count']}/{Config.MAX_FAILED_ATTEMPTS})"
+            )
+            flash('Session expired. Please try again.', 'error')
+            return _login_response(400)
+
         # Validate password
         password = request.form.get('password', '')
 
@@ -218,6 +233,9 @@ def login_submit():
 @csrf.exempt
 def logout():
     """User logout"""
+    if not validate_session():
+        # No active session - nothing to log out, keep the audit log clean
+        return redirect(url_for('login_page'))
     client_ip = get_real_ip()
     destroy_session()
     logging.info(f"Admin logout from IP: {client_ip}")
@@ -473,6 +491,12 @@ def not_found(error):
 @app.errorhandler(405)
 def method_not_allowed(error):
     return jsonify({'error': 'Method not allowed'}), 405
+
+@app.errorhandler(CSRFError)
+def csrf_error(error):
+    # Fallback for csrf.protect() calls outside login_submit
+    logging.warning(f"CSRF validation failed from IP: {get_real_ip()} on {request.path} ({error.description})")
+    return jsonify({'error': 'CSRF validation failed'}), 400
 
 
 # ============================================
