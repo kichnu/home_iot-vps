@@ -31,6 +31,18 @@ DEVICE_TYPES = {
         'description': 'Aquarium Temperature Controller',
         'icon': '',
         'color': '#f87171'
+    },
+    'lamp_1': {
+        'name': 'Lamp 1',
+        'description': 'Aquarium LED Lamp',
+        'icon': '',
+        'color': '#facc15'
+    },
+    'lamp_2': {
+        'name': 'Lamp 2',
+        'description': 'Aquarium LED Lamp',
+        'icon': '',
+        'color': '#facc15'
     }
 }
 
@@ -74,6 +86,22 @@ DEVICE_NETWORK_CONFIG = {
         'lan_ip': '192.168.10.4',
         'lan_port': 80,
         'proxy_path': '/device/thermo',
+        'health_endpoint': '/api/health',
+        'has_local_dashboard': True,
+        'timeout_seconds': 5
+    },
+    'lamp_1': {
+        'lan_ip': '192.168.10.5',
+        'lan_port': 80,
+        'proxy_path': '/device/lamp1',
+        'health_endpoint': '/api/health',
+        'has_local_dashboard': True,
+        'timeout_seconds': 5
+    },
+    'lamp_2': {
+        'lan_ip': '192.168.10.6',
+        'lan_port': 80,
+        'proxy_path': '/device/lamp2',
         'health_endpoint': '/api/health',
         'has_local_dashboard': True,
         'timeout_seconds': 5
