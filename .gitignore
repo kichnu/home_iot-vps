@@ -66,6 +66,7 @@ coverage.xml
 # IDE settings
 .vscode/
 .idea/
+*.code-workspace
 *.swp
 *.swo
 *~
@@ -121,6 +122,9 @@ backups/
 start_water_system.sh
 deploy_*.sh
 *.service.backup*
+
+# Server-local incident notes (kept on the VPS only, repo is public)
+docs/INCIDENT-*
 
 # Data export files
 *.csv
