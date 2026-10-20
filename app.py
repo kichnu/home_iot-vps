@@ -319,6 +319,7 @@ def session_info():
 
 
 @app.route('/api/device-health/<device_type>')
+@limiter.limit("120 per minute")  # dashboard polls every device every 30s; outermost so 401s count too
 @require_admin_auth
 def device_health_check(device_type):
     """Check if IoT device is reachable through WireGuard"""
