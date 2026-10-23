@@ -57,7 +57,7 @@
         .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 16px;
+            padding: 16px 16px 56px;
             position: relative;
             z-index: 1;
             min-height: 100vh;
@@ -66,12 +66,9 @@
 
         /* Header */
         header {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            padding: 12px 0 24px;
+            padding: 8px 0 16px;
             border-bottom: 1px solid var(--border);
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .header-top {
@@ -168,11 +165,11 @@
             color: var(--accent-amber);
         }
 
-        /* Device cards */
+        /* Device tiles: two columns, an odd last tile stays bottom-left */
         .devices-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
         }
 
         .device-card {
@@ -184,6 +181,35 @@
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
+        }
+
+        .device-tile {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px;
+            min-height: 0;
+        }
+
+        .device-tile .device-header {
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+
+        .device-tile .device-info {
+            min-width: 0;
+        }
+
+        .device-tile .device-info h2 {
+            line-height: 1.3;
+            margin-bottom: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .device-tile .btn-device {
+            padding: 10px 12px;
         }
 
         .device-card::before {
@@ -220,55 +246,27 @@
             color: var(--text-muted);
         }
 
-        /* Status badge */
+        /* Status badge: vertical bar, one H2 line high and 1/4 of that wide, colour only */
         .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+            height: 1.3em;
+            width: 0.325em;
+            border-radius: 2px;
         }
 
         .status-online {
-            background: rgba(34, 197, 94, 0.15);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: var(--accent-green);
-        }
-
-        .status-online .status-dot {
             background: var(--accent-green);
             animation: pulse 2s infinite;
         }
 
         .status-offline {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: var(--accent-red);
-        }
-
-        .status-offline .status-dot {
             background: var(--accent-red);
         }
 
         .status-checking {
-            background: rgba(234, 179, 8, 0.15);
-            border: 1px solid rgba(234, 179, 8, 0.3);
-            color: var(--accent-yellow);
-        }
-
-        .status-checking .status-dot {
             background: var(--accent-yellow);
-            animation: pulse-fast 1s infinite;
+            animation: pulse 1s infinite;
         }
 
         @keyframes pulse {
@@ -276,12 +274,7 @@
             50% { opacity: 0.5; }
         }
 
-        @keyframes pulse-fast {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.2); }
-        }
-
-        /* Device meta info */
+        /* Device meta info (hidden from the tiles, kept for possible reuse)
         .device-meta {
             display: flex;
             gap: 16px;
@@ -308,6 +301,7 @@
             font-weight: 500;
             color: var(--text-secondary);
         }
+        */
 
         /* Action button */
         .device-actions {
@@ -352,6 +346,7 @@
 
         /* No devices */
         .no-devices {
+            grid-column: 1 / -1;
             text-align: center;
             padding: 60px 20px;
             color: var(--text-muted);
@@ -362,33 +357,116 @@
             margin-bottom: 8px;
         }
 
-        /* Footer */
-        .footer-info {
-            text-align: center;
-            padding: 24px 16px;
-            color: var(--text-muted);
-            font-size: 0.75rem;
+        /* Bottom drawer: session info + security */
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 10, 26, 0.6);
+            z-index: 900;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
         }
 
-        /* Mobile adjustments */
+        .drawer-backdrop.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drawer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            z-index: 950;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .drawer.open {
+            transform: translateY(0);
+        }
+
+        .drawer-toggle {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 64px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .drawer-toggle:hover {
+            color: var(--text-primary);
+        }
+
+        .drawer-toggle svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: transform 0.3s ease;
+        }
+
+        .drawer.open .drawer-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        .drawer-content {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            border-radius: var(--radius) var(--radius) 0 0;
+            box-shadow: var(--shadow);
+            padding: 16px;
+            max-height: 80vh;
+            max-height: 80dvh;
+            overflow-y: auto;
+        }
+
+        /* Mobile: the whole dashboard fits one screen, tiles share its height */
         @media (max-width: 600px) {
-            .header-top {
+            body {
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
+            }
+
+            .container {
+                height: 100vh;
+                height: 100dvh;
+                display: flex;
                 flex-direction: column;
-                gap: 12px;
-                text-align: center;
             }
 
-            .logo {
-                justify-content: center;
+            header {
+                padding-top: 0;
+                margin-bottom: 12px;
             }
 
-            .device-header {
-                flex-direction: column;
-                gap: 12px;
+            .devices-grid {
+                flex: 1;
+                min-height: 0;
+                grid-auto-rows: minmax(0, 1fr);
             }
 
+            .device-tile .device-info h2,
             .status-badge {
-                align-self: flex-start;
+                font-size: 1rem;
             }
         }
 
@@ -517,7 +595,62 @@
                 </div>
                 <button class="btn-logout" onclick="logout()">Logout</button>
             </div>
+        </header>
 
+        <!-- Devices Grid -->
+        <div class="devices-grid" id="devicesGrid">
+            {% for device in device_types %}
+            <div class="device-card device-tile"
+                 style="--device-color: {{ device.color }}; --device-color-dark: {{ device.color }}CC; --device-color-light: {{ device.color }}DD;"
+                 data-device-type="{{ device.type }}">
+                <div class="device-header">
+                    <div class="device-info">
+                        <h2>{% if device.icon %}{{ device.icon }} {% endif %}{{ device.name }}</h2>
+                    </div>
+                    <div class="status-badge status-checking" id="status-{{ device.type }}"
+                         role="img" title="Checking" aria-label="Checking"></div>
+                </div>
+
+                {# Device meta hidden from the tiles, kept for possible reuse
+                <div class="device-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Last Check</span>
+                        <span class="meta-value" id="lastcheck-{{ device.type }}">--:--:--</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Latency</span>
+                        <span class="meta-value" id="latency-{{ device.type }}">-- ms</span>
+                    </div>
+                </div>
+                #}
+
+                <div class="device-actions">
+                    {% if device.has_local_dashboard and device.proxy_path %}
+                    <a href="{{ device.proxy_path }}/" class="btn-device" id="btn-{{ device.type }}">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                        Open
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="no-devices">
+                <h2>No devices configured</h2>
+                <p>Add devices in device_config.py to get started.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Bottom drawer -->
+    <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleDrawer(false)"></div>
+    <div class="drawer" id="drawer">
+        <button class="drawer-toggle" id="drawerToggle" onclick="toggleDrawer()"
+                aria-expanded="false" aria-controls="drawerContent" aria-label="Show session and security">
+            <svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>
+        </button>
+
+        <div class="drawer-content" id="drawerContent" inert>
             <div class="header-info">
                 <div class="info-badge">
                     <span class="label">UTC Time</span>
@@ -536,85 +669,35 @@
                     <span class="value" id="clientIp">...</span>
                 </div>
             </div>
-        </header>
 
-        <!-- Devices Grid -->
-        <div class="devices-grid" id="devicesGrid">
-            {% for device in device_types %}
-            <div class="device-card"
-                 style="--device-color: {{ device.color }}; --device-color-dark: {{ device.color }}CC; --device-color-light: {{ device.color }}DD;"
-                 data-device-type="{{ device.type }}">
+            <!-- Passkey Management Section -->
+            <div style="margin-top: 24px;">
+                <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
+                    Security
+                </h2>
+            </div>
+
+            <div class="device-card" style="--device-color: var(--accent-amber); --device-color-dark: #d97706; --device-color-light: #f59e0bDD;">
                 <div class="device-header">
                     <div class="device-info">
-                        <h2>{% if device.icon %}{{ device.icon }} {% endif %}{{ device.name }}</h2>
-                        <p class="description">{{ device.description }}</p>
-                    </div>
-                    <div class="status-badge status-checking" id="status-{{ device.type }}">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Checking</span>
+                        <h2>Passkeys</h2>
+                        <p class="description">Manage fingerprint authentication credentials</p>
                     </div>
                 </div>
 
-                <div class="device-meta">
-                    <div class="meta-item">
-                        <span class="meta-label">Last Check</span>
-                        <span class="meta-value" id="lastcheck-{{ device.type }}">--:--:--</span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Latency</span>
-                        <span class="meta-value" id="latency-{{ device.type }}">-- ms</span>
-                    </div>
+                <div id="credentialsList" style="padding: 0 16px;">
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">Loading credentials...</p>
                 </div>
 
                 <div class="device-actions">
-                    {% if device.has_local_dashboard and device.proxy_path %}
-                    <a href="{{ device.proxy_path }}/" class="btn-device" id="btn-{{ device.type }}">
-                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-                        Open Dashboard
-                    </a>
-                    {% endif %}
+                    <button class="btn-device" onclick="registerPasskey()" id="registerPasskeyBtn"
+                            style="--device-color: var(--accent-amber); --device-color-dark: #d97706; cursor: pointer; border: none;">
+                        Register New Passkey
+                    </button>
                 </div>
+
+                <div id="passkeyStatus" style="margin: 12px 16px 0; display: none; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.875rem; text-align: center;"></div>
             </div>
-            {% else %}
-            <div class="no-devices">
-                <h2>No devices configured</h2>
-                <p>Add devices in device_config.py to get started.</p>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Passkey Management Section -->
-        <div style="margin-top: 32px;">
-            <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
-                Security
-            </h2>
-        </div>
-
-        <div class="device-card" style="--device-color: var(--accent-amber); --device-color-dark: #d97706; --device-color-light: #f59e0bDD;">
-            <div class="device-header">
-                <div class="device-info">
-                    <h2>Passkeys</h2>
-                    <p class="description">Manage fingerprint authentication credentials</p>
-                </div>
-            </div>
-
-            <div id="credentialsList" style="padding: 0 16px;">
-                <p style="color: var(--text-muted); font-size: 0.875rem;">Loading credentials...</p>
-            </div>
-
-            <div class="device-actions">
-                <button class="btn-device" onclick="registerPasskey()" id="registerPasskeyBtn"
-                        style="--device-color: var(--accent-amber); --device-color-dark: #d97706; cursor: pointer; border: none;">
-                    Register New Passkey
-                </button>
-            </div>
-
-            <div id="passkeyStatus" style="margin: 12px 16px 0; display: none; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 0.875rem; text-align: center;"></div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer-info">
-            IoT Gateway Dashboard
         </div>
     </div>
 
@@ -702,8 +785,9 @@
         // Health check for device
         async function checkDeviceHealth(deviceType) {
             const statusEl = document.getElementById(`status-${deviceType}`);
-            const latencyEl = document.getElementById(`latency-${deviceType}`);
-            const lastCheckEl = document.getElementById(`lastcheck-${deviceType}`);
+            // Device meta hidden from the tiles
+            // const latencyEl = document.getElementById(`latency-${deviceType}`);
+            // const lastCheckEl = document.getElementById(`lastcheck-${deviceType}`);
             const btnEl = document.getElementById(`btn-${deviceType}`);
 
             if (!statusEl) {
@@ -720,29 +804,27 @@
                 }
                 const data = await response.json();
 
-                // Update last check time
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('pl-PL', {
-                    timeZone: 'Europe/Warsaw',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                });
-                lastCheckEl.textContent = timeStr;
+                // Update last check time (device meta hidden from the tiles)
+                // const now = new Date();
+                // const timeStr = now.toLocaleTimeString('pl-PL', {
+                //     timeZone: 'Europe/Warsaw',
+                //     hour: '2-digit',
+                //     minute: '2-digit',
+                //     second: '2-digit',
+                //     hour12: false
+                // });
+                // lastCheckEl.textContent = timeStr;
 
                 if (data.online) {
-                    statusEl.className = 'status-badge status-online';
-                    statusEl.innerHTML = '<span class="status-dot"></span><span class="status-text">Online</span>';
-                    latencyEl.textContent = `${data.latency_ms} ms`;
+                    setStatus(statusEl, 'online', 'Online');
+                    // latencyEl.textContent = `${data.latency_ms} ms`;
                     if (btnEl) {
                         btnEl.removeAttribute('disabled');
                         btnEl.style.pointerEvents = 'auto';
                     }
                 } else {
-                    statusEl.className = 'status-badge status-offline';
-                    statusEl.innerHTML = '<span class="status-dot"></span><span class="status-text">Offline</span>';
-                    latencyEl.textContent = '-- ms';
+                    setStatus(statusEl, 'offline', 'Offline');
+                    // latencyEl.textContent = '-- ms';
                     if (btnEl) {
                         btnEl.setAttribute('disabled', 'true');
                         btnEl.style.pointerEvents = 'none';
@@ -750,10 +832,16 @@
                 }
             } catch (error) {
                 console.error(`Health check failed for ${deviceType}:`, error);
-                statusEl.className = 'status-badge status-offline';
-                statusEl.innerHTML = '<span class="status-dot"></span><span class="status-text">Error</span>';
-                latencyEl.textContent = '-- ms';
+                setStatus(statusEl, 'offline', 'Error');
+                // latencyEl.textContent = '-- ms';
             }
+        }
+
+        // Status is shown by colour only; the label goes to tooltip and screen readers
+        function setStatus(statusEl, state, label) {
+            statusEl.className = `status-badge status-${state}`;
+            statusEl.title = label;
+            statusEl.setAttribute('aria-label', label);
         }
 
         // Check all devices
@@ -787,12 +875,25 @@
             }
         });
 
-        // Close modal on Escape key
+        // Close modal and drawer on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeLogoutModal();
+                toggleDrawer(false);
             }
         });
+
+        // Bottom drawer with session info and security
+        function toggleDrawer(open) {
+            const drawer = document.getElementById('drawer');
+            const isOpen = open === undefined ? !drawer.classList.contains('open') : open;
+            drawer.classList.toggle('open', isOpen);
+            document.getElementById('drawerBackdrop').classList.toggle('show', isOpen);
+            document.getElementById('drawerContent').inert = !isOpen;
+            const toggle = document.getElementById('drawerToggle');
+            toggle.setAttribute('aria-expanded', String(isOpen));
+            toggle.setAttribute('aria-label', isOpen ? 'Hide session and security' : 'Show session and security');
+        }
 
         // ==============================
         // Passkey Management
