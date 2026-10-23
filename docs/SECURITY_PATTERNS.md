@@ -407,7 +407,8 @@ Passkeys to dodatkowa metoda logowania do bramy VPS (obok hasla). ESP32 NIE impl
 4. Credential (public key) zapisany w SQLite (`webauthn_credentials`)
 
 **Flow logowania:**
-1. Strona logowania VPS → "Sign in with Passkey"
+1. Strona logowania VPS → "Sign in with Passkey" albo passkey wybrany z listy autouzupelniania pola hasla
+   (conditional UI, `mediation: 'conditional'`, `allowCredentials` puste — tylko klucze odkrywalne)
 2. Przegladarka wywoluje `navigator.credentials.get()`
 3. VPS weryfikuje podpis, tworzy sesje (`create_session()`)
 4. Nieudane proby WebAuthn liczone w tym samym systemie lockout co haslo

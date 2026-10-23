@@ -277,7 +277,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter password">
+                <input type="password" id="password" name="password" required autocomplete="current-password webauthn" placeholder="Enter password">
             </div>
 
             <button type="submit" class="login-btn" id="loginBtn">
@@ -323,70 +323,117 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
+            {% if passkeys_available %}
+            startConditionalPasskey();
+            {% endif %}
             document.getElementById('password').focus();
         });
 
         // WebAuthn / Passkey Login
+        const PASSKEY_BTN_HTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><circle cx="12" cy="16.5" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Sign in with Passkey';
+        let conditionalAbort = null;
+
+        async function fetchAuthOptions(conditional) {
+            const beginResp = await fetch('/api/webauthn/auth/begin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conditional: conditional }),
+                credentials: 'same-origin'
+            });
+
+            if (!beginResp.ok) {
+                const err = await beginResp.json();
+                throw new Error(err.error || 'Failed to start authentication');
+            }
+
+            const beginData = await beginResp.json();
+            const options = JSON.parse(beginData.options);
+
+            options.challenge = base64urlToBuffer(options.challenge);
+            if (options.allowCredentials) {
+                options.allowCredentials = options.allowCredentials.map(function(cred) {
+                    return Object.assign({}, cred, { id: base64urlToBuffer(cred.id) });
+                });
+            }
+            return options;
+        }
+
+        async function completePasskeyLogin(credential) {
+            const authResponse = {
+                id: credential.id,
+                rawId: bufferToBase64url(credential.rawId),
+                response: {
+                    authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+                    clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                    signature: bufferToBase64url(credential.response.signature),
+                    userHandle: credential.response.userHandle
+                        ? bufferToBase64url(credential.response.userHandle)
+                        : null
+                },
+                type: credential.type,
+                authenticatorAttachment: credential.authenticatorAttachment || null
+            };
+
+            const completeResp = await fetch('/api/webauthn/auth/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(authResponse),
+                credentials: 'same-origin'
+            });
+
+            const completeData = await completeResp.json();
+
+            if (completeResp.ok && completeData.success) {
+                window.location.href = completeData.redirect || '/dashboard';
+                return true;
+            }
+            showPasskeyError(completeData.error || 'Authentication failed');
+            return false;
+        }
+
+        // Conditional UI: passkeys offered in the password field autofill list
+        async function startConditionalPasskey() {
+            if (!window.PublicKeyCredential || !PublicKeyCredential.isConditionalMediationAvailable) return;
+            if (!(await PublicKeyCredential.isConditionalMediationAvailable())) return;
+
+            conditionalAbort = new AbortController();
+            const signal = conditionalAbort.signal;
+            try {
+                const options = await fetchAuthOptions(true);
+                if (signal.aborted) return;
+                const credential = await navigator.credentials.get({
+                    publicKey: options,
+                    mediation: 'conditional',
+                    signal: signal
+                });
+                await completePasskeyLogin(credential);
+            } catch (error) {
+                // Aborted by the passkey button or dismissed by the user - nothing to show
+                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                    console.warn('Conditional passkey login unavailable:', error);
+                }
+            }
+        }
+
         async function startPasskeyLogin() {
             const btn = document.getElementById('passkeyBtn');
             const errorDiv = document.getElementById('passkeyError');
+
+            // Only one WebAuthn request may be pending at a time
+            if (conditionalAbort) {
+                conditionalAbort.abort();
+                conditionalAbort = null;
+            }
 
             btn.disabled = true;
             btn.textContent = 'Waiting for fingerprint...';
             if (errorDiv) errorDiv.style.display = 'none';
 
+            let redirecting = false;
             try {
-                const beginResp = await fetch('/api/webauthn/auth/begin', {
-                    method: 'POST',
-                    credentials: 'same-origin'
-                });
-
-                if (!beginResp.ok) {
-                    const err = await beginResp.json();
-                    throw new Error(err.error || 'Failed to start authentication');
-                }
-
-                const beginData = await beginResp.json();
-                const options = JSON.parse(beginData.options);
-
-                options.challenge = base64urlToBuffer(options.challenge);
-                if (options.allowCredentials) {
-                    options.allowCredentials = options.allowCredentials.map(function(cred) {
-                        return Object.assign({}, cred, { id: base64urlToBuffer(cred.id) });
-                    });
-                }
-
+                const options = await fetchAuthOptions(false);
                 const credential = await navigator.credentials.get({ publicKey: options });
-
-                const authResponse = {
-                    id: credential.id,
-                    rawId: bufferToBase64url(credential.rawId),
-                    response: {
-                        authenticatorData: bufferToBase64url(credential.response.authenticatorData),
-                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                        signature: bufferToBase64url(credential.response.signature),
-                        userHandle: credential.response.userHandle
-                            ? bufferToBase64url(credential.response.userHandle)
-                            : null
-                    },
-                    type: credential.type,
-                    authenticatorAttachment: credential.authenticatorAttachment || null
-                };
-
-                const completeResp = await fetch('/api/webauthn/auth/complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(authResponse),
-                    credentials: 'same-origin'
-                });
-
-                const completeData = await completeResp.json();
-
-                if (completeResp.ok && completeData.success) {
-                    window.location.href = completeData.redirect || '/dashboard';
-                } else {
-                    showPasskeyError(completeData.error || 'Authentication failed');
-                }
+                redirecting = await completePasskeyLogin(credential);
             } catch (error) {
                 if (error.name === 'NotAllowedError') {
                     showPasskeyError('Authentication cancelled or timed out.');
@@ -397,7 +444,8 @@
                 }
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><circle cx="12" cy="16.5" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Sign in with Passkey';
+                btn.innerHTML = PASSKEY_BTN_HTML;
+                if (!redirecting) startConditionalPasskey();
             }
         }
 

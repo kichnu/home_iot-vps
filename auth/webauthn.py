@@ -133,9 +133,13 @@ def verify_registration_response(credential_json: str, expected_challenge: bytes
     return {'success': True, 'credential_id': credential_id}
 
 
-def generate_authentication_options() -> Optional[dict]:
+def generate_authentication_options(conditional: bool = False) -> Optional[dict]:
     """
     Generate WebAuthn authentication options (challenge).
+
+    Args:
+        conditional: True for conditional UI (passkey autofill) - allowCredentials is left
+            empty, so only discoverable credentials are offered by the browser
 
     Returns:
         dict with 'options_json' and 'challenge', or None if no credentials registered
@@ -170,7 +174,7 @@ def generate_authentication_options() -> Optional[dict]:
 
     options = wa_generate_authentication_options(
         rp_id=Config.WEBAUTHN_RP_ID,
-        allow_credentials=allow_credentials,
+        allow_credentials=[] if conditional else allow_credentials,
         user_verification=UserVerificationRequirement.REQUIRED,
         timeout=60000,
     )

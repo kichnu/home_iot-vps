@@ -78,10 +78,15 @@ No event logging or data storage - this is purely an auth gateway.
 **Library:** `webauthn==2.7.0` (py_webauthn by Duo Labs)
 
 **Flow:**
-1. Admin logs in with password, registers passkey from Dashboard -> Security section
+1. Admin logs in with password, registers passkey from Dashboard -> bottom drawer (`^`) -> Passkeys
 2. On next login, "Sign in with Passkey" button appears alongside password form
-3. Passkey auth creates the same session as password login (uses `create_session()`)
-4. Failed WebAuthn attempts feed into existing IP-based lockout system
+3. Conditional UI (passkey autofill): the login page starts a `mediation: 'conditional'` request on load,
+   so passkeys are offered in the password field's autofill list (`autocomplete="current-password webauthn"`).
+   It calls `/api/webauthn/auth/begin` with `{"conditional": true}`, which leaves `allowCredentials` empty
+   (discoverable credentials only). The button aborts the pending conditional request and runs the modal
+   flow with the full `allowCredentials` list (needed for non-discoverable security keys).
+4. Passkey auth creates the same session as password login (uses `create_session()`)
+5. Failed WebAuthn attempts feed into existing IP-based lockout system
 
 **Registration:** Requires active session (password login first). No `authenticator_attachment` restriction - accepts platform (fingerprint), cross-device (QR code), and security keys (NFC/USB).
 
@@ -91,14 +96,21 @@ No event logging or data storage - this is purely an auth gateway.
 
 ### Known Issues - GrapheneOS
 
-**Passkey platform authenticator does NOT work on GrapheneOS** (tested Jan 2026):
+**Google Password Manager passkeys do NOT work on GrapheneOS** (tested Jan 2026):
 - Sandboxed Google Play Services lack full access to the lockout/biometrics API
 - PIN verification loops endlessly ("unlock device again" prompt repeats)
 - Happens even with all permissions granted to Play Services
 - Affects both Vanadium and Chrome browsers
 - **Standard Android works correctly** - fingerprint registration and login confirmed
 
-**Workarounds for GrapheneOS users:**
-- Use a hardware security key (YubiKey 5C NFC, Google Titan) via NFC or USB-C
-- Use cross-device flow: scan QR code with a standard Android phone
+**Working setup on GrapheneOS** (confirmed Oct 2026): a third-party passkey provider through
+Android Credential Manager, without Google Password Manager:
+- Install Bitwarden (Proton Pass should work the same way)
+- Settings -> Passwords, passkeys & accounts: set Bitwarden as the preferred service, disable Google
+- Register the passkey in Vanadium; login works with Bitwarden's fingerprint/unlock prompt
+- Bitwarden passkeys are synced through its cloud (not device-bound)
+
+**Other options:**
+- Hardware security key (YubiKey 5C NFC, Google Titan) via NFC or USB-C - usually needs sandboxed Play
+- Cross-device flow: scan QR code with a standard Android phone
 - Fall back to password login (always available)

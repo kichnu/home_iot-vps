@@ -419,7 +419,8 @@ def webauthn_auth_begin():
         return jsonify({'error': 'Account temporarily locked'}), 429
 
     try:
-        result = generate_authentication_options()
+        body = request.get_json(silent=True) or {}
+        result = generate_authentication_options(conditional=body.get('conditional') is True)
         if result is None:
             return jsonify({'error': 'No passkeys registered'}), 404
 
